@@ -20,26 +20,26 @@ from environment import SepsisEnvironment
 #  FASTAPI REST API
 # ─────────────────────────────────────────────
 
-api = FastAPI()
+app = FastAPI()
 api_env = SepsisEnvironment(task="easy", seed=42)
 api_env.reset()
 
-@api.get("/")
+@app.get("/")
 def root():
     return {"status": "ok", "environment": "sepsis-icu-openenv"}
 
-@api.post("/reset")
+@app.post("/reset")
 def api_reset(task: str = "easy"):
     global api_env
     api_env = SepsisEnvironment(task=task, seed=42)
     state = api_env.reset()
     return JSONResponse(state.model_dump())
 
-@api.get("/state")
+@app.get("/state")
 def api_state():
     return JSONResponse(api_env.state().model_dump())
 
-@api.post("/step")
+@app.post("/step")
 def api_step(action: dict):
     act = ClinicalAction(**action)
     result = api_env.step(act)
@@ -598,9 +598,9 @@ with gr.Blocks(title="Sepsis ICU OpenEnv") as demo:
     """)
 
 
-app = gr.mount_gradio_app(api, demo, path="/ui")
+app = gr.mount_gradio_app(app, demo, path="/ui")
 
 if __name__ == "__main__":
-    uvicorn.run(api, host="0.0.0.0", port=7860)
+    uvicorn.run(app, host="0.0.0.0", port=7860)
 def main():
     return app
