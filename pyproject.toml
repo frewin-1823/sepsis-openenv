@@ -3,9 +3,12 @@ name = "sepsis-openenv"
 version = "1.0.0"
 description = "Sepsis ICU OpenEnv Environment"
 requires-python = ">=3.10"
+dependencies = [
+    "openenv-core>=0.2.0"
+]
 
 [tool.openenv]
-environment = "server.app:app"
+environment = "server.app:main"
 
 [project.scripts]
-server = "server.app:app"
+server = "server.app:main"
