@@ -5,4 +5,7 @@ description = "Sepsis ICU OpenEnv Environment"
 requires-python = ">=3.10"
 
 [tool.openenv]
-environment = "app:api"
+environment = "server.app:app"
+
+[project.scripts]
+server = "server.app:app"
