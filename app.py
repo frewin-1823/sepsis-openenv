@@ -268,7 +268,7 @@ def run_llm_agent(task_id):
     if not api_key:
         return "OPENAI_API_KEY not set!", format_history(history), "Set OPENAI_API_KEY to run LLM agent.", ""
 
-    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+    client = OpenAI(api_key=api_key)
     env = make_env(task_id, seed=42)
     state = env.reset()
     history = []
@@ -366,7 +366,7 @@ def run_llm_agent(task_id):
 
         try:
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0,
                 seed=42,
@@ -544,7 +544,27 @@ with gr.Blocks(title="Sepsis ICU OpenEnv") as demo:
             )
 
     gr.Markdown("---")
-    
+    gr.Markdown("### Make a Treatment Decision")
+
+    with gr.Row():
+        fluids_input = gr.Radio(choices=["0", "250", "500", "1000"], value="0", label="IV Fluids (ml)")
+        antibiotic_input = gr.Radio(choices=["none", "pip-tazo", "vancomycin", "meropenem"], value="none", label="Antibiotic")
+
+    with gr.Row():
+        vaso_start = gr.Checkbox(label="Start Vasopressors")
+        vaso_stop = gr.Checkbox(label="Stop Vasopressors")
+        order_labs = gr.Checkbox(label="Order Labs")
+        escalate = gr.Checkbox(label="Escalate Care")
+
+    treat_btn = gr.Button("Treat Patient (Step)", variant="primary", interactive=False)
+
+    with gr.Row():
+        feedback_box = gr.Textbox(label="Action Feedback", lines=6, interactive=False)
+        score_box = gr.Textbox(label="Score Tracker", lines=4, interactive=False)
+
+    gr.Markdown("---")
+    gr.Markdown("### Patient History Log")
+    history_display = gr.Textbox(label="Last 15 hours", lines=18, interactive=False)
 
     # ── EVENTS ──
     reset_btn.click(
