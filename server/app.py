@@ -1,9 +1,10 @@
 import sys
+import os
 sys.stdout.reconfigure(encoding='utf-8')
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import gradio as gr
 import random
-import os
 import json
 import threading
 import uvicorn
