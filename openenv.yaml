@@ -1,0 +1,239 @@
+name: sepsis-icu-environment
+version: 1.0.0
+author: sepsis-openenv
+license: MIT
+
+description: >
+  A clinical decision support environment where an AI agent acts as an ICU
+  physician treating patients with sepsis. The agent makes hourly treatment
+  decisions including fluid resuscitation, antibiotic selection, and
+  vasopressor management. Based on real-world Surviving Sepsis Campaign
+  guidelines. The environment simulates realistic disease progression,
+  antibiotic resistance, and multi-organ dysfunction.
+
+tags:
+  - healthcare
+  - medicine
+  - clinical-decision-support
+  - sepsis
+  - icu
+  - real-world
+
+# ─────────────────────────────────────────────
+#  OBSERVATION SPACE
+# ─────────────────────────────────────────────
+
+observation_space:
+  vitals:
+    heart_rate:
+      type: float
+      range: [30, 180]
+      unit: bpm
+      description: Heart rate. Normal 60-100.
+    systolic_bp:
+      type: float
+      range: [50, 200]
+      unit: mmHg
+      description: Systolic blood pressure. Normal 90-140.
+    diastolic_bp:
+      type: float
+      range: [30, 120]
+      unit: mmHg
+      description: Diastolic blood pressure. Normal 60-90.
+    mean_arterial_pressure:
+      type: float
+      range: [30, 150]
+      unit: mmHg
+      description: MAP. Critical threshold is 65 mmHg.
+    temperature:
+      type: float
+      range: [34.0, 42.0]
+      unit: celsius
+      description: Body temperature. Normal 36.5-37.5.
+    spo2:
+      type: float
+      range: [70, 100]
+      unit: percent
+      description: Oxygen saturation. Normal 95-100.
+    respiratory_rate:
+      type: float
+      range: [8, 40]
+      unit: breaths_per_min
+      description: Respiratory rate. Normal 12-20.
+
+  labs:
+    lactate:
+      type: float
+      range: [0.3, 15.0]
+      unit: mmol/L
+      description: Tissue perfusion marker. Normal <2.0, danger >4.0.
+    wbc:
+      type: float
+      range: [0.5, 40.0]
+      unit: 10^9/L
+      description: White blood cell count. Normal 4-11.
+    creatinine:
+      type: float
+      range: [40, 900]
+      unit: umol/L
+      description: Kidney function. Normal 60-110.
+    platelets:
+      type: float
+      range: [10, 500]
+      unit: 10^9/L
+      description: Coagulation marker. Normal 150-400.
+
+  clinical:
+    sofa_score:
+      type: int
+      range: [0, 24]
+      description: Sequential Organ Failure Assessment score. Higher = worse.
+    hours_since_admission:
+      type: int
+      description: Time elapsed since ICU admission.
+    on_vasopressors:
+      type: bool
+      description: Whether patient is receiving vasopressor support.
+    on_antibiotics:
+      type: bool
+      description: Whether patient is receiving antibiotics.
+    antibiotic_type:
+      type: str
+      values: [none, pip-tazo, vancomycin, meropenem]
+      description: Currently active antibiotic.
+    total_fluids_given_ml:
+      type: int
+      description: Cumulative IV fluids administered.
+    is_alive:
+      type: bool
+      description: Patient survival status.
+    is_stable:
+      type: bool
+      description: Whether all vitals are within normal range.
+    hours_stable:
+      type: int
+      description: Consecutive hours with normal vitals.
+
+# ─────────────────────────────────────────────
+#  ACTION SPACE
+# ─────────────────────────────────────────────
+
+action_space:
+  give_fluids:
+    type: int
+    values: [0, 250, 500, 1000]
+    unit: ml
+    description: IV fluid bolus to administer this hour.
+  antibiotic:
+    type: str
+    values: [none, pip-tazo, vancomycin, meropenem]
+    description: Antibiotic to prescribe. none stops current antibiotic.
+  start_vasopressors:
+    type: bool
+    description: Start norepinephrine drip for blood pressure support.
+  stop_vasopressors:
+    type: bool
+    description: Wean vasopressors if patient is improving.
+  order_labs:
+    type: bool
+    description: Order new blood work for updated lab values.
+  escalate_care:
+    type: bool
+    description: Escalate to senior physician.
+
+# ─────────────────────────────────────────────
+#  REWARD FUNCTION
+# ─────────────────────────────────────────────
+
+reward:
+  range: [-2.0, 1.0]
+  per_step: true
+  description: >
+    Partial progress reward at every timestep. Positive rewards for
+    clinical improvement (SOFA reduction, lactate falling, MAP
+    normalization, SpO2 recovery). Negative rewards for deterioration,
+    dangerous vital signs, fluid overload, and unnecessary antibiotics.
+    Terminal reward of +1.0 for sustained stabilization, -2.0 for death.
+
+# ─────────────────────────────────────────────
+#  TASKS
+# ─────────────────────────────────────────────
+
+tasks:
+  - id: easy
+    name: Stable Sepsis - UTI Source
+    max_steps: 24
+    seed: 42
+    baseline_score: 0.540
+    description: >
+      Single patient with mild sepsis from urinary tract infection.
+      Standard antibiotics are effective. Goal: stabilize within 24 hours.
+    grader: grade_easy
+    scoring:
+      survival: 0.4
+      stabilization: 0.3
+      sofa_improvement: 0.2
+      efficiency: 0.1
+
+  - id: medium
+    name: Deteriorating Sepsis - Pneumonia Source
+    max_steps: 48
+    seed: 42
+    baseline_score: 0.533
+    description: >
+      Patient deteriorates sharply at hour 6. Requires vasopressors and
+      aggressive management. Goal: prevent septic shock within 48 hours.
+    grader: grade_medium
+    scoring:
+      survival: 0.35
+      stabilization: 0.25
+      sofa_improvement: 0.20
+      antibiotic_stewardship: 0.10
+      vasopressor_management: 0.10
+
+  - id: hard
+    name: Multi-System Sepsis - Resistant Organism
+    max_steps: 72
+    seed: 42
+    baseline_score: 0.410
+    description: >
+      Severe sepsis with 50% chance of antibiotic-resistant organism.
+      Multiple deterioration events. Goal: maximize survival and minimize
+      organ damage over 72 hours.
+    grader: grade_hard
+    scoring:
+      survival: 0.30
+      stabilization: 0.20
+      sofa_improvement: 0.15
+      antibiotic_reasoning: 0.15
+      stewardship: 0.10
+      fluid_management: 0.10
+
+# ─────────────────────────────────────────────
+#  BASELINE SCORES (Random Agent, Seed 42)
+# ─────────────────────────────────────────────
+
+baseline:
+  agent: random
+  seed: 42
+  scores:
+    easy: 0.540
+    medium: 0.533
+    hard: 0.410
+    average: 0.494
+
+# ─────────────────────────────────────────────
+#  ENVIRONMENT METADATA
+# ─────────────────────────────────────────────
+
+api:
+  reset: "env.reset() -> PatientState"
+  state: "env.state() -> PatientState"
+  step: "env.step(action: ClinicalAction) -> StepResult"
+  episode_result: "env.get_episode_result() -> EpisodeResult"
+
+timestep: 1 hour
+max_episode_length: 72 steps
+deterministic: true
+seed_supported: true
+render_supported: true
