@@ -15,7 +15,7 @@ def root():
     return {"status": "ok", "environment": "sepsis-icu-openenv"}
 
 
-@app.post("/reset")
+@app.post("/openenv/reset")
 def reset(task: str = "easy"):
     global env
     env = SepsisEnvironment(task=task, seed=42)
@@ -23,12 +23,12 @@ def reset(task: str = "easy"):
     return JSONResponse(state.model_dump())
 
 
-@app.get("/state")
+@app.get("/openenv/state")
 def state():
     return JSONResponse(env.state().model_dump())
 
 
-@app.post("/step")
+@app.post("/openenv/step")
 def step(action: dict):
     act = ClinicalAction(**action)
     result = env.step(act)
